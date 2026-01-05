@@ -15,6 +15,9 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ['*']
 
+CRONJOBS = [
+    ("0 10 * * *", "bot.tasks.check_subscriptions"),
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -26,6 +29,7 @@ INSTALLED_APPS = [
 
     'rest_framework',
     'bot',
+    "django_crontab",
 ]
 
 MIDDLEWARE = [

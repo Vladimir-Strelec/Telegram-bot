@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import requests
@@ -83,8 +83,11 @@ def handle_text_message(telegram_id, text):
     if user.state == "awaiting_subscription_name":
         awaiting_subscriptions(user, telegram_id, text)
 
-    if user.state == "awaiting_amount":
+    elif user.state == "awaiting_amount":
         awaiting_amount(user, telegram_id, text)
+
+    elif user.state == "billing_date":
+        billing_date(user, telegram_id, text)
 
 
 def awaiting_subscriptions(user, telegram_id, text):
@@ -122,8 +125,41 @@ def awaiting_amount(user, telegram_id, text):
     sub.amount = amount
     sub.save()
 
+    user.state = "billing_date"
+    user.save()
+
+    send_message(telegram_id, "Введите дату в формате ДД.ММ.ГГГГ\nНапример: 15.01.2026")
+    return
+
+
+def billing_date(user, telegram_id, text):
+    print(text)
+    try:
+        date_obj = datetime.strptime(text, "%d.%m.%Y").date()
+    except ValueError:
+        send_message(
+            telegram_id,
+            "Неверный формат даты ❌\nВведите дату в формате ДД.ММ.ГГГГ\nНапример: 15.01.2026"
+        )
+        return
+
+    sub = Subscription.objects.filter(user=user).last()
+    if not sub:
+        send_message(telegram_id, "Ошибка: подписка не найдена")
+        user.state = "idle"
+        user.save()
+        return
+
+    sub.billing_date = date_obj
+    sub.save()
+
     user.state = "idle"
     user.save()
 
-    send_message(telegram_id, "Подписка добавлена ✅")
-    return
+    send_message(
+        telegram_id,
+        f"Готово ✅\nДата списания: {date_obj.strftime('%d.%m.%Y')}"
+    )
+
+
+
